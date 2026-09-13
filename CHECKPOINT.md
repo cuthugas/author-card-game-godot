@@ -1,0 +1,31 @@
+# Blackbriar checkpoint — September 13, 2026
+
+User requested complete Godot game with subagent monitoring, dark gothic Appalachian Blackbriar style, 3D tabletop / illustrated 2D cards, fast AI singleplayer first; future classroom multiplayer. Creative freedom authorized. Original at /home/cuthugas/code/author-card-game (read only inspiration). Work here is not a functioning git checkout (.git placeholder read-only).
+
+Implemented: 37 cards, five authors and powers, three-lane deterministic engine, AI, 32 questions, campaign five seals per author, 18-card deck editor, codex lessons/source references, profile persistence, tutorial, settings, result flow, candlelit 3D table, generated art, procedural sounds. Main UI in main.gd, engine game_state.gd, content card_data.gd/literary_content.gd, profile.gd, atmosphere.gd.
+
+QA: test_runner.gd 7306 checks /200 matches passing, median5 chapters range3–10. tests/ui_runner.gd 60 lifecycle checks passing including rapid restarts and single reward. Check tests/PLAYTEST.md. Last fonts swapped to Liberation OFL assets/Display.ttf and Body.ttf and imported successfully. Profile nested sanitization just added by rules agent; rerun QA on final state.
+
+Agents all hit account usage limit around12:11 EDT. Final visual smoke is being run; tests/title.png,battle.png,authors.png generated if successful. Inspect them to fix layout issues before calling complete. Actual mouse-driven playtesting still needed; automated UI tests call handlers. User asked stop on credits exhausted and resume after credits restored.
+
+Remaining: visual polish/check at 1440x900 and smaller window; actual full UI playthrough; final profile corruption tests; export package. builds/rebuild.sh and export_presets.cfg prepared. builds/blackbriar-linux has bundled local Arch Godot binary and wrapper but needs blackbriar.pck generated with --export-pack. Update package stale URW/AGPL font notices to Liberation OFL assets notices. No online multiplayer yet (user accepts singleplayer first). Package is local Linux, not portable across classroom OSes. Do not mark active goal complete until visual verification/package done.
+
+Run source: godot --path '/home/cuthugas/code/Codex Author Card Game Godot'
+Run rules: godot --headless --path . --script test_runner.gd
+Run UI: XDG_DATA_HOME=/tmp/blackbriar-ui-qa godot --headless --path . --script tests/ui_runner.gd
+Run visual: godot --path . -- --visual-smoke
+Sandbox GUI needs escalation; approved prefix godot --path. Headless approved too. Testing own profile should be isolated.
+
+Final visual smoke completed successfully and captured all three PNGs. At process exit it reported 2 ObjectDB instances leaked and1 resource in use; investigate clean shutdown (queued nodes freed one frame later / awaited visual coroutine) before final release. No parse/runtime gameplay errors in this smoke run. Images remain unreviewed. builds/rebuild.sh corrected to use --editor --import --quit, avoiding its original hanging import invocation.
+
+Continuation12:13: inspected battle.png, discovered TextureRect and Label minimum-size initialization caused massive overflow. Moved their size assignment after property configuration/add_child; syntax passed and fresh GUI visual smoke completed. Refreshed PNGs require final inspection. Updated packaged README to Liberation OFL and copied license. Shutdown leak still persists even with deferred quit, so needs verbose investigation.
+
+Continuation12:15: source rules rerun7306/0. Generated builds/blackbriar-linux/blackbriar.pck and verified package loads all assets. Traced shutdown leak using verbose output to AudioStreamPlaybackWAV ambience: engine forced --quit-after can stop before audio server processes cleanup. Added _exit_tree audio stop/null and normal _quit_game waits0.15s before quit; window-close and menu use graceful shutdown. GUI visual smoke now exits with no warnings. Current PCK predates this latest graceful-shutdown change and must be rebuilt before delivery. Remaining full actual-input playthrough and presentation polish audit; do not claim complete yet.
+
+Continuation12:17: added tests/input_runner.gd and passed actual viewport mouse routing through complete duel35 clicks/6 chapters/0 failures. Profile isolated under /tmp. This covers title -> authors -> quick duel -> card/lane play -> chapters -> result -> title, not just direct handler calls. Added command/evidence to tests/PLAYTEST.md. Still need final visual audit more screens, completion requirement audit, and final rebuild with graceful shutdown.
+
+Continuation final review: rendered and inspected campaign/deck/codex/tutorial/question/result, all readable and unclipped. Added12 profile tests (malformed save sanitization, campaign loss/quick-duel rules, five-seal cap, saved deck/counters) all pass. README.md provides player/run/test information. Final PCK regenerated with shutdown fixes. A graphical package launch smoke is being checked. Outstanding quality aspirations: richer per-card art and animated clash presentation would further improve feel; current cards share faction artwork. Do not confuse automated correctness with human fun/learning validation.
+
+Continuation combat polish: main now highlights only legal lane targets, shows active SHIELDED status, provides exact author-power tooltip, animates player clash lines within existing0.35s turn wait, and floats net Reputation changes. Ambient node now always attached even if asset missing. Mouse routing rerun28 clicks/5 chapters/0failures; UI lifecycle rerun in progress. Package needs rebuild after these polish edits. Shared faction art remains intentional aesthetic limitation, no per-character portraits.
+
+RELEASE VERIFIED: final rebuilt package run from /tmp with bundled godot-runtime and independent external mouse test. Result28 actions/five chapters/zero failures; clean shutdown. RELEASE_AUDIT.md maps agreed singleplayer requirements to authoritative evidence. README.md and BUILD.md contain run instructions. Source and release ready; future multiplayer/classroom portability remains explicitly deferred. Current final package hash recorded in builds/blackbriar-linux/PACKAGE-SHA256.txt. Earlier remaining-work notes are historical; audit is authoritative for release status.
