@@ -2,7 +2,7 @@ class_name LiteraryContent
 extends RefCounted
 
 static func _q(prompt: String, choices: Array, correct: int, explanation: String, author: String = "neutral") -> Dictionary:
-	return {"question":prompt,"prompt":prompt,"choices":choices,"options":choices,"correct":correct,"answer":correct,"explanation":explanation,"author":author}
+	return {"question":prompt,"choices":choices,"correct":correct,"explanation":explanation,"author":author}
 
 static func questions() -> Array[Dictionary]:
 	return [
@@ -39,9 +39,3 @@ static func questions() -> Array[Dictionary]:
 		_q("The Queen of Hearts' repeated threats satirize…",["Arbitrary authority","Patient scientific inquiry","Quiet friendship"],0,"Her extreme commands turn the exercise of power into absurdity.","carroll"),
 		_q("The Cheshire Cat's vanishing grin challenges…",["The order of the alphabet","Ordinary physical logic","The existence of gardens"],1,"The grin without a cat makes a familiar expression into a literal impossibility.","carroll")
 	]
-
-static func all_questions() -> Array[Dictionary]:
-	return questions()
-
-static func author_description(author: String) -> String:
-	return str(CardData.AUTHORS.get(author.to_lower(), {}).get("description", "Literature rewards curiosity and careful attention."))

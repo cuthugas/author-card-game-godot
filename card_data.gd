@@ -11,9 +11,15 @@ const AUTHORS := {
 
 static func _card(id: String, title: String, author: String, cost: int, attack: int, health: int, effect: String, rules: String, lesson: String, source: String) -> Dictionary:
 	var is_unit := author != "neutral"
-	return {"id":id,"name":title,"author":author,"author_id":author,"cost":cost,"attack":attack,"health":health,"effect":effect,"value":1,"type":"unit" if is_unit else "spell","kind":"Character" if is_unit else "Concept","text":rules,"description":rules,"lesson":lesson,"source":source}
+	return {"id":id,"name":title,"author":author,"cost":cost,"attack":attack,"health":health,"effect":effect,"type":"unit" if is_unit else "spell","kind":"Character" if is_unit else "Concept","text":rules,"lesson":lesson,"source":source}
+
+static var _card_cache: Array[Dictionary] = []
 
 static func all_cards() -> Array[Dictionary]:
+	if _card_cache.is_empty(): _card_cache = _build_cards()
+	return _card_cache
+
+static func _build_cards() -> Array[Dictionary]:
 	return [
 		_card("poe_raven","The Raven","poe",3,3,3,"drain","Direct strikes restore 1 reputation.","The repeated word 'Nevermore' changes meaning as the speaker's questions become more desperate.","The Raven (1845)"),
 		_card("poe_usher","Roderick Usher","poe",2,2,2,"death_draw","On defeat: draw 1 card.","The decaying house parallels the decline of the Usher family, linking setting and character.","The Fall of the House of Usher (1839)"),
@@ -72,3 +78,14 @@ static func deck_for(author: String) -> Array[Dictionary]:
 
 static func author_color(author: String) -> Color:
 	return Color(AUTHORS.get(author.to_lower(), {"color":"9b9b8f"}).color)
+
+static func is_valid_deck(author: String, deck: Variant) -> bool:
+	if not deck is Array or deck.size() != 18: return false
+	var counts := {}
+	for id in deck:
+		if not id is String: return false
+		var card := get_card(id)
+		if card.is_empty() or (card.author != author and card.author != "neutral"): return false
+		counts[id] = counts.get(id, 0) + 1
+		if counts[id] > 2: return false
+	return true

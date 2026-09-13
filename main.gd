@@ -252,7 +252,7 @@ func _start_match(rival: String) -> void:
 	log_lines.clear()
 	message = "Select a card, then choose a lane. End the chapter to clash."
 	var saved_deck = profile.data.decks.get(selected_author,[])
-	var deck: Array = saved_deck if saved_deck is Array and _valid_deck(saved_deck) else []
+	var deck: Array = saved_deck if saved_deck is Array and CardData.is_valid_deck(selected_author,saved_deck) else []
 	game.start_match(selected_author,rival,deck)
 	screen = "match"
 	_show_match()
@@ -615,17 +615,6 @@ func _show_codex() -> void:
 		_label(tile,"%d INK  ·  %s" % [card.cost,card.kind.to_upper()],Rect2(16,188,220,25),13,GOLD)
 		_button(tile,"Read annotation",Rect2(15,230,220,38),func(): _inspect_card(card))
 
-func _valid_deck(deck: Array) -> bool:
-	if deck.size() != 18: return false
-	var counts := {}
-	for entry in deck:
-		if not entry is String: return false
-		var card: Dictionary = CardData.get_card(entry)
-		if card.is_empty() or card.author not in [selected_author,"neutral"]: return false
-		counts[entry] = counts.get(entry,0)+1
-		if counts[entry] > 2: return false
-	return true
-
 func _starter_ids() -> Array:
 	var result: Array = []
 	for card in CardData.deck_for(selected_author): result.append(card.id)
@@ -633,7 +622,7 @@ func _starter_ids() -> Array:
 
 func _show_deck() -> void:
 	var saved = profile.data.decks.get(selected_author,[])
-	deck_draft = saved.duplicate() if saved is Array and _valid_deck(saved) else _starter_ids()
+	deck_draft = saved.duplicate() if saved is Array and CardData.is_valid_deck(selected_author,saved) else _starter_ids()
 	_render_deck()
 
 func _render_deck() -> void:
@@ -651,7 +640,7 @@ func _render_deck() -> void:
 		total_cost += card.cost
 	_label(panel,"%d characters\n%d concepts\n%.1f average inspiration" % [units,deck_draft.size()-units,float(total_cost)/maxi(1,deck_draft.size())],Rect2(25,184,290,110),20,IVORY)
 	_label(panel,"A strong opening matters. Include inexpensive characters, a few ways to draw, and concepts that support your author's power.",Rect2(25,323,290,153),21,MUTED,true)
-	_button(panel,"Save this deck",Rect2(25,511,290,53),func(): profile.data.decks[selected_author] = deck_draft.duplicate(); profile.save_profile(); _show_authors(),true,not _valid_deck(deck_draft))
+	_button(panel,"Save this deck",Rect2(25,511,290,53),func(): profile.data.decks[selected_author] = deck_draft.duplicate(); profile.save_profile(); _show_authors(),true,not CardData.is_valid_deck(selected_author,deck_draft))
 	_button(panel,"Restore starter deck",Rect2(25,580,290,48),func(): deck_draft = _starter_ids(); _render_deck())
 	var scroll := ScrollContainer.new()
 	scroll.position = Vector2(50,155)

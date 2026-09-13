@@ -23,18 +23,7 @@ func load_profile() -> void:
 	if parsed.get("decks") is Dictionary:
 		for author in CardData.AUTHORS:
 			var deck = parsed.decks.get(author)
-			if _valid_deck(author, deck): data.decks[author] = deck.duplicate()
-
-func _valid_deck(author: String, deck: Variant) -> bool:
-	if not deck is Array or deck.size() != 18: return false
-	var counts := {}
-	for id in deck:
-		if not id is String: return false
-		var card := CardData.get_card(id)
-		if card.is_empty() or (card.author != author and card.author != "neutral"): return false
-		counts[id] = counts.get(id, 0) + 1
-		if counts[id] > 2: return false
-	return true
+			if CardData.is_valid_deck(author, deck): data.decks[author] = deck.duplicate()
 
 func save_profile() -> void:
 	var file := FileAccess.open(PATH + ".tmp", FileAccess.WRITE)

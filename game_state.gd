@@ -12,7 +12,6 @@ var turn := 0
 var winner := -1
 var database: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
-var last_concept_effect := ""
 var quiz_used := false
 var _resolving := false
 
@@ -25,7 +24,6 @@ func start_match(hero: String, rival: String, custom_deck: Array = [], seed_valu
 	current_player = 0
 	quiz_used = false
 	_resolving = false
-	last_concept_effect = ""
 	players = [_new_player(hero.to_lower()), _new_player(rival.to_lower())]
 	for side in 2:
 		players[side].deck = _build_deck(players[side].author)
@@ -78,7 +76,7 @@ func can_play_card(side: int, hand_index: int, lane: int = 0) -> bool:
 	return _effect_valid(side, str(card.effect), lane)
 
 func _effect_valid(side: int, effect: String, lane: int) -> bool:
-	if effect in ["buff", "shield"]: return players[side].board[lane] != null
+	if effect == "buff": return players[side].board[lane] != null
 	if effect == "weaken": return players[1-side].board[lane] != null
 	if effect == "metaphor":
 		var previous: String = players[side].last_spell
@@ -103,7 +101,6 @@ func play_card(side: int, hand_index: int, lane: int = 0) -> bool:
 	else:
 		_resolve_effect(side, str(card.effect), lane)
 		if card.effect != "metaphor": p.last_spell = card.effect
-		last_concept_effect = card.effect
 		p.discard.append(card)
 	_check_winner()
 	_record_action("card",side,lane,"%s plays %s in lane %d (−%d ink). %s" % [_who(side),card.name,lane+1,card.cost,card.text])
@@ -120,7 +117,6 @@ func _resolve_effect(side: int, effect: String, lane: int) -> void:
 			p.board[lane].attack += 2
 			p.board[lane].health += 1
 			p.board[lane].max_health += 1
-		"shield": p.board[lane].shield = true
 		"heal":
 			p.reputation = mini(16, p.reputation + 3)
 			if p.board[lane] != null: p.board[lane].health = mini(p.board[lane].max_health, p.board[lane].health + 2)
@@ -282,7 +278,7 @@ func _ai_score(card: Dictionary, lane: int) -> float:
 				score = 4.0
 				if enemy != null: score += 5.0 if enemy.health <= 3 else 1.0
 				elif players[0].reputation <= 3: score += 100.0
-			"buff", "shield": score = 4.0 + (2.0 if enemy != null else 0.0)
+			"buff": score = 4.0 + (2.0 if ally != null and ally.health < ally.get("max_health", ally.health) else 0.0)
 			"heal": score = float(mini(3, 16 - players[1].reputation)) + (2.0 if ally != null and ally.health < ally.get("max_health", ally.health) else 0.0)
 			"draw": score = 3.0 if players[1].hand.size() < 5 and players[1].deck.size() >= 2 else -2.0
 			"foreshadow": score = 3.5 if not players[1].deck.is_empty() else -2.0
