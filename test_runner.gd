@@ -4,9 +4,10 @@ extends SceneTree
 var checks := 0
 var failures: Array[String] = []
 var finish_count := 0
-const AUTHORS := ["poe", "shelley", "austen", "shakespeare", "carroll"]
+var AUTHORS: Array = []
 
 func _init() -> void:
+	AUTHORS = CardData.AUTHORS.keys()
 	call_deferred("_run")
 
 func check(condition: bool, description: String) -> void:
@@ -169,6 +170,20 @@ func _test_effects() -> void:
 	check(game.players[1].board[2].health == 2 and not game.players[1].board[2].shield, "shield consumed without damage")
 	check(_cast(game, "conflict", 2), "second conflict defeats shieldless unit")
 	check(game.players[1].board[2] == null, "defeated unit removed")
+	check(_cast(game, "bierce_dictionary", 2), "expose resolves on empty lane")
+	check(game.players[1].reputation == 12, "expose damages author when lane empty")
+	_put(game, 1, "shakespeare_portia", 2)
+	check(_cast(game, "bierce_dictionary", 2), "expose resolves on shielded unit")
+	check(game.players[1].board[2].health == 4 and not game.players[1].board[2].shield, "expose shatters shield and still damages")
+	check(_cast(game, "bierce_dictionary", 2), "expose resolves on an unshielded unit")
+	check(game.players[1].board[2].health == 4 and game.players[1].reputation == 11, "expose bypasses an unshielded unit and damages its author")
+	_put(game, 0, "carroll_rabbit", 1)
+	check(_cast(game, "bierce_owlcreek", 1), "reprieve resolves")
+	check(game.players[0].board[1].reprieve, "reprieve flag set")
+	game._hit_unit(0, 1, 99)
+	check(game.players[0].board[1] != null and game.players[0].board[1].health == 1 and not game.players[0].board[1].reprieve, "reprieve prevents first fatal blow")
+	game._hit_unit(0, 1, 99)
+	check(game.players[0].board[1] == null, "second fatal blow defeats normally")
 	check(_cast(game, "dramatic_irony", 1), "irony resolves")
 	check(game.players[1].board[1].attack == 4 and game.players[1].board[1].health == 1, "weaken plus surviving rage stacks correctly")
 	var next_ink: int = game.players[0].next_ink
@@ -204,6 +219,8 @@ func _test_powers() -> void:
 			"austen": check(game.players[0].reputation == 13 and game.players[0].hand.size() == hand_size + 1, "Social Insight heals and draws")
 			"shakespeare": check(game.players[0].board[0].attack == 4, "Curtain buffs cast")
 			"carroll": check(game.players[0].hand.size() == hand_size + 2, "Rabbit Hole draws2")
+			"doyle": check(game.players[1].reputation == 15 and game.players[0].hand.size() == hand_size + 1, "Science of Deduction damages1 and draws1")
+			"burroughs": check(game.players[0].board[0].health == 4 and game.players[0].board[0].max_health == 4, "Wild Frontier grows all health")
 		game.free()
 	var game := new_game()
 	_put(game, 0, "poe_raven", 0)

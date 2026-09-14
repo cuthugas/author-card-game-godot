@@ -2,7 +2,7 @@
 
 ## Original artwork
 
-`library.png` and `author_atlas.png`: generated for Blackbriar using OpenAI image generation. These are newly generated illustrations, not historical portraits or reproductions of source-book artwork. No third-party stock images were used in these assets.
+`library.png`, `author_atlas.png`, and all 59 illustrations in `cards/`: generated for Blackbriar using OpenAI image generation. These are newly generated illustrations, not historical portraits or reproductions of source-book artwork. No third-party stock images were used in these assets.
 
 ## Original audio
 

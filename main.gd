@@ -7,10 +7,7 @@ const GOLD := Color("c9a86a")
 const IVORY := Color("eee5cc")
 const MUTED := Color("a7b3a1")
 const BG := Color("101d17")
-const AUTHORS := ["poe", "shelley", "shakespeare", "austen", "carroll"]
-const NAMES := {"poe":"Edgar Allan Poe", "shelley":"Mary Shelley", "shakespeare":"William Shakespeare", "austen":"Jane Austen", "carroll":"Lewis Carroll"}
-const TAGS := {"poe":"DREAD & RECURSION", "shelley":"CREATION & SACRIFICE", "shakespeare":"AMBITION & TRAGEDY", "austen":"WIT & RESILIENCE", "carroll":"WONDER & POSSIBILITY"}
-const ICONS := {"poe":"R", "shelley":"S", "shakespeare":"W", "austen":"A", "carroll":"C", "neutral":"✦"}
+var AUTHORS: Array = []
 var profile = Profile.new()
 var game
 var ui: Control
@@ -41,6 +38,7 @@ var replay_step := 0
 
 func _ready() -> void:
 	get_tree().auto_accept_quit = false
+	AUTHORS = CardData.AUTHORS.keys()
 	profile.load_profile()
 	selected_author = profile.data.author if profile.data.author in AUTHORS else "poe"
 	if ResourceLoader.exists("res://assets/author_atlas.png"): art = load("res://assets/author_atlas.png")
@@ -146,14 +144,42 @@ func _picture(parent: Node, texture: Texture2D, box: Rect2) -> TextureRect:
 	node.size = box.size
 	return node
 
+const ART_AUTHOR_COUNT := 5 # illustrated frames present in assets/author_atlas.png
+
 func _author_art(author: String) -> Texture2D:
 	if art == null: return null
+	var index: int = AUTHORS.find(author)
+	if index < 0: return null
+	# The original atlas predates the expanded roster. Use each new author's
+	# signature card illustration until dedicated selection portraits are added.
+	if index >= ART_AUTHOR_COUNT:
+		var signature_cards := {"doyle": "doyle_holmes", "burroughs": "burroughs_tarzan"}
+		var signature_id := str(signature_cards.get(author, ""))
+		var signature_path := "res://assets/cards/" + signature_id + ".png"
+		if not signature_id.is_empty() and ResourceLoader.exists(signature_path):
+			return load(signature_path)
+		return null
 	var atlas := AtlasTexture.new()
 	atlas.atlas = art
-	var index: int = AUTHORS.find(author)
-	if index < 0: index = 0
-	atlas.region = Rect2(index*art.get_width()/5.0,0,art.get_width()/5.0,art.get_height())
+	atlas.region = Rect2(index*art.get_width()/float(ART_AUTHOR_COUNT),0,art.get_width()/float(ART_AUTHOR_COUNT),art.get_height())
 	return atlas
+
+func _card_art(card: Dictionary) -> Texture2D:
+	var id := str(card.get("id", ""))
+	var individual_path := "res://assets/cards/" + id + ".png"
+	if not id.is_empty() and ResourceLoader.exists(individual_path):
+		return load(individual_path)
+	return _author_art(str(card.get("author", "")))
+
+func _author_name(author: String) -> String:
+	if CardData.AUTHORS.has(author): return CardData.AUTHORS[author].name
+	if CardData.SUPPLEMENTAL_AUTHORS.has(author): return CardData.SUPPLEMENTAL_AUTHORS[author].name
+	return "The Literary Arts"
+
+func _author_tag(author: String) -> String:
+	if CardData.AUTHORS.has(author): return CardData.AUTHORS[author].tag
+	if CardData.SUPPLEMENTAL_AUTHORS.has(author): return CardData.SUPPLEMENTAL_AUTHORS[author].tag
+	return ""
 
 func _background() -> void:
 	if backdrop: _picture(ui,backdrop,Rect2(0,0,1440,900))
@@ -184,7 +210,7 @@ func _show_title() -> void:
 	_button(ui,"How to play",Rect2(295,650,198,50),_show_tutorial)
 	_button(ui,"Settings",Rect2(83,716,198,46),_show_settings)
 	_button(ui,"Quit",Rect2(295,716,198,46),_quit_game)
-	_label(ui,"FIVE AUTHORS  /  THREE LANES  /  ONE LAST WORD",Rect2(83,829,700,25),14,GOLD)
+	_label(ui,"%d AUTHORS  /  THREE LANES  /  ONE LAST WORD" % AUTHORS.size(),Rect2(83,829,700,25),14,GOLD)
 	var stats := _panel(ui,Rect2(1030,709,325,121),Color("111d17dd"),Color("756544"))
 	_label(stats,"YOUR ANNOTATIONS",Rect2(22,14,280,24),14,GOLD)
 	_label(stats,"%d victories   ·   %d insights" % [profile.data.wins,profile.data.knowledge],Rect2(22,50,280,32),22,IVORY,true)
@@ -194,20 +220,34 @@ func _show_authors() -> void:
 	screen = "authors"
 	_clear()
 	_header("Choose your voice", "Every author changes how the argument unfolds. All cards are available from the beginning.", _show_title)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(50,157)
+	scroll.size = Vector2(1340,514)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	ui.add_child(scroll)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",20)
+	scroll.add_child(row)
 	for i in AUTHORS.size():
 		var id: String = AUTHORS[i]
 		var color := CardData.author_color(id)
-		var card := _panel(ui,Rect2(50+i*272,157,252,514),Color("14221b"),GOLD if selected_author == id else color)
+		var holder := Control.new()
+		holder.custom_minimum_size = Vector2(252,514)
+		row.add_child(holder)
+		var card := _panel(holder,Rect2(0,0,252,514),Color("14221b"),GOLD if selected_author == id else color)
 		if art: _picture(card,_author_art(id),Rect2(8,8,236,260))
-		_label(card,TAGS[id],Rect2(16,283,220,34),12,color.lightened(0.3))
-		_label(card,NAMES[id],Rect2(16,326,224,70),29,IVORY,true)
+		_label(card,_author_tag(id),Rect2(16,283,220,34),12,color.lightened(0.3))
+		_label(card,_author_name(id),Rect2(16,326,224,70),29,IVORY,true)
 		_label(card,"%d / 5 seals collected" % profile.progress(id),Rect2(16,408,220,25),15,MUTED)
 		_button(card,"Selected" if selected_author == id else "Choose author",Rect2(16,451,220,46),func(): selected_author = id; profile.data.author = id; profile.save_profile(); _show_authors(),selected_author == id)
-	_label(ui,"%s  ·  %s" % [NAMES[selected_author],_power_description(selected_author)],Rect2(60,699,1320,60),20,IVORY,true)
+	_label(ui,"%s  ·  %s" % [_author_name(selected_author),_power_description(selected_author)],Rect2(60,699,1320,60),20,IVORY,true)
 	_button(ui,"Campaign   →",Rect2(60,792,300,57),_show_campaign,true)
-	_button(ui,"Quick duel",Rect2(380,792,270,57),func(): campaign_mode = false; _start_match(AUTHORS[(AUTHORS.find(selected_author)+1+int(profile.data.matches)%4)%5]))
+	_button(ui,"Quick duel",Rect2(380,792,270,57),func(): campaign_mode = false; _start_match(_next_author(selected_author,1+int(profile.data.matches)%maxi(1,AUTHORS.size()-1))))
 	_button(ui,"Build your deck",Rect2(670,792,270,57),_show_deck)
 	_button(ui,"Rules & tutorial",Rect2(960,792,270,57),_show_tutorial)
+
+func _next_author(author: String, offset: int) -> String:
+	return AUTHORS[(AUTHORS.find(author)+offset)%AUTHORS.size()]
 
 func _power_description(author: String) -> String:
 	return CardData.AUTHORS[author].power + ": " + CardData.AUTHORS[author].power_text
@@ -225,8 +265,8 @@ func _show_campaign() -> void:
 		_label(card,"SEAL %s  ·  %s" % [str(i+1),"EARNED" if i < progress else ("NEXT" if i == progress else "LOCKED")],Rect2(16,225,220,26),14,GOLD)
 		_label(card,places[i],Rect2(16,270,220,67),27,IVORY,true)
 		_label(card,stories[i],Rect2(16,346,220,60),17,MUTED)
-		_label(card,NAMES[AUTHORS[i]],Rect2(16,424,220,25),16,IVORY)
-	_label(ui,"Your voice: %s     •     %d of 5 seals" % [NAMES[selected_author],progress],Rect2(60,687,1260,36),24,IVORY,true)
+		_label(card,_author_name(AUTHORS[i]),Rect2(16,424,220,25),16,IVORY)
+	_label(ui,"Your voice: %s     •     %d of 5 seals" % [_author_name(selected_author),progress],Rect2(60,687,1260,36),24,IVORY,true)
 	if progress < 5:
 		_button(ui,"Enter %s   →" % places[progress],Rect2(60,759,520,65),func(): campaign_mode = true; _start_match(AUTHORS[progress]),true)
 	else:
@@ -268,7 +308,7 @@ func _show_match() -> void:
 	_rect(ui,Rect2(0,0,1440,96),Color("0c1711ed"))
 	_label(ui,"BLACKBRIAR",Rect2(35,17,290,40),30,IVORY,true)
 	_label(ui,"CHAPTER %02d" % int(playback_event.get("turn",game.turn)),Rect2(35,58,220,25),14,GOLD)
-	_label(ui,"%s  /  %s" % [NAMES[hero.author],NAMES[enemy.author]],Rect2(320,26,700,35),23,IVORY,true)
+	_label(ui,"%s  /  %s" % [_author_name(hero.author),_author_name(enemy.author)],Rect2(320,26,700,35),23,IVORY,true)
 	_label(ui,_phase_text(),Rect2(320,61,870,28),15,GOLD)
 	if busy:
 		_button(ui,"Resume" if replay_paused else "Pause replay",Rect2(861,22,155,40),func(): replay_paused = not replay_paused; _show_match())
@@ -276,7 +316,7 @@ func _show_match() -> void:
 	_button(ui,"?",Rect2(1210,24,50,46),_show_tutorial,false,busy)
 	_button(ui,"Menu",Rect2(1275,24,125,46),_pause_menu)
 	# The three argument lanes sit over a real candlelit 3D table.
-	_label(ui,"RIVAL’S CHARACTERS  ·  " + NAMES[enemy.author],Rect2(60,110,710,28),18,CardData.author_color(enemy.author).lightened(0.35))
+	_label(ui,"RIVAL’S CHARACTERS  ·  " + _author_name(enemy.author),Rect2(60,110,710,28),18,CardData.author_color(enemy.author).lightened(0.35))
 	_label(ui,"%d REPUTATION" % enemy.reputation,Rect2(839,107,280,36),25,IVORY,true)
 	_health_bar(Rect2(60,146,1050,5),enemy.reputation,Color("b87871"))
 	for lane in 3:
@@ -285,7 +325,7 @@ func _show_match() -> void:
 		_board_slot(Rect2(x,170,334,160),enemy.board[lane],lane,true)
 		_label(ui,"LANE %d  ·  ATTACKS STRAIGHT ACROSS" % (lane+1),Rect2(x+8,351,325,28),14,GOLD)
 		_board_slot(Rect2(x,398,334,160),hero.board[lane],lane,false)
-	_label(ui,"YOUR CHARACTERS  ·  " + NAMES[hero.author],Rect2(60,579,730,30),18,CardData.author_color(hero.author).lightened(0.35))
+	_label(ui,"YOUR CHARACTERS  ·  " + _author_name(hero.author),Rect2(60,579,730,30),18,CardData.author_color(hero.author).lightened(0.35))
 	_label(ui,"%d REPUTATION" % hero.reputation,Rect2(839,576,280,36),25,IVORY,true)
 	_health_bar(Rect2(60,618,1050,5),hero.reputation,Color("a5b88d"))
 	_label(ui,"YOUR HAND  /  SELECT A CARD, THEN A LANE",Rect2(60,641,1050,26),13,GOLD)
@@ -310,7 +350,8 @@ func _board_slot(box: Rect2, unit, lane: int, enemy: bool) -> void:
 		_label(panel,"RIVAL: UNDEFENDED" if enemy else "YOUR EMPTY SLOT",Rect2(38,81,265,28),15,MUTED)
 		_label(panel,"Your attack hits rival Reputation" if enemy else "Play a character here to defend",Rect2(38,117,280,24),14,Color("85927d"))
 	else:
-		if art: _picture(panel,_author_art(unit.author),Rect2(7,7,88,145))
+		var unit_art := _card_art(unit)
+		if unit_art: _picture(panel,unit_art,Rect2(7,7,88,145))
 		_label(panel,unit.name,Rect2(110,12,211,48),23,IVORY,true)
 		_label(panel,"%d ATK   /   %d HP" % [unit.attack,unit.health],Rect2(110,66,211,28),19,GOLD)
 		var ability: String = unit.text
@@ -327,8 +368,9 @@ func _hand_card(card: Dictionary, index: int, box: Rect2) -> void:
 	var selected := selected_card == index
 	var affordable: bool = card.cost <= game.players[0].inspiration
 	var panel := _panel(ui,box,Color("1c2c22"),GOLD if selected else CardData.author_color(card.author))
-	if art:
-		var pic := _picture(panel,_author_art(card.author),Rect2(4,4,box.size.x-8,58))
+	var card_art := _card_art(card)
+	if card_art:
+		var pic := _picture(panel,card_art,Rect2(4,4,box.size.x-8,58))
 		pic.modulate = Color(0.8,0.85,0.75) if affordable else Color(0.35,0.4,0.35)
 	_rect(panel,Rect2(8,8,30,30),GOLD if affordable else Color("53604c"))
 	_label(panel,str(card.cost),Rect2(16,8,28,30),21,BG,true)
@@ -426,7 +468,7 @@ func _on_action(event: Dictionary) -> void:
 func _targets_enemy(card: Dictionary) -> bool:
 	var effect: String = card.effect
 	if effect == "metaphor": effect = game.players[0].last_spell
-	return card.kind != "Character" and effect in ["damage","weaken"]
+	return card.kind != "Character" and effect in ["damage","weaken","expose"]
 
 func _target_instruction(card: Dictionary) -> String:
 	if card.cost > game.players[0].inspiration: return "Needs %d ink; you have %d. Choose a cheaper card or end your turn." % [card.cost,game.players[0].inspiration]
@@ -519,10 +561,10 @@ func _show_result() -> void:
 	var won: bool = game.winner == 0
 	var panel := _modal("The last word is yours." if won else ("A shared silence." if game.winner == 2 else "The rival has the last word."),800,555)
 	_label(panel,"VICTORY" if won else ("DRAW" if game.winner == 2 else "CHAPTER CLOSED"),Rect2(35,126,730,34),18,GOLD)
-	_label(panel,"%s • %d chapters" % [NAMES[selected_author],game.turn],Rect2(35,183,730,40),28,IVORY,true)
+	_label(panel,"%s • %d chapters" % [_author_name(selected_author),game.turn],Rect2(35,183,730,40),28,IVORY,true)
 	_label(panel,"An argument worth remembering. Your seal has been added to the midnight road." if won and campaign_mode else ("Your argument held. Try a different voice, refine your deck, or meet your next rival." if won else "Every revision begins with a question. Try protecting an open lane, or save ink for a decisive concept."),Rect2(35,248,730,88),21,MUTED,true)
 	_label(panel,"%d victories recorded   ·   %d literary insights" % [profile.data.wins,profile.data.knowledge],Rect2(35,353,730,35),17,GOLD)
-	_button(panel,"Continue the midnight road" if campaign_mode else "Another duel",Rect2(35,419,730,52),_show_campaign if campaign_mode else func(): _start_match(AUTHORS[(AUTHORS.find(game.players[1].author)+1)%5]),true)
+	_button(panel,"Continue the midnight road" if campaign_mode else "Another duel",Rect2(35,419,730,52),_show_campaign if campaign_mode else func(): _start_match(_next_author(game.players[1].author,1)),true)
 	_button(panel,"Return to the lodge",Rect2(35,486,730,44),_show_title)
 
 func _show_settings() -> void:
@@ -579,8 +621,9 @@ func _answer_question(correct: bool, question: Dictionary) -> void:
 
 func _inspect_card(card: Dictionary) -> void:
 	var panel := _modal(card.name,900,590)
-	if art: _picture(panel,_author_art(card.author),Rect2(35,125,210,390))
-	_label(panel,(NAMES.get(card.author,"The Literary Arts") as String).to_upper(),Rect2(277,125,578,30),15,GOLD)
+	var inspect_art := _card_art(card)
+	if inspect_art: _picture(panel,inspect_art,Rect2(35,125,210,390))
+	_label(panel,_author_name(card.author).to_upper(),Rect2(277,125,578,30),15,GOLD)
 	_label(panel,"%d INSPIRATION  ·  %s" % [card.cost,card.kind],Rect2(277,178,570,35),19,IVORY)
 	_label(panel,card.text,Rect2(277,232,570,93),24,IVORY,true)
 	_label(panel,card.lesson,Rect2(277,340,570,117),20,MUTED,true)
@@ -590,14 +633,21 @@ func _inspect_card(card: Dictionary) -> void:
 func _show_codex() -> void:
 	screen = "codex"
 	_clear()
-	_header("The card catalogue", "37 cards. Five literary voices. Inspect any card to discover the source and the craft behind its effect.",_show_title)
-	var filters := ["all","poe","shelley","shakespeare","austen","carroll","neutral"]
-	for i in filters.size():
-		var filter: String = filters[i]
-		_button(ui,filter.capitalize(),Rect2(50+i*193,144,181,43),func(): codex_filter = filter; _show_codex(),filter == codex_filter)
+	_header("The card catalogue", "%d cards across %d authors, plus supplemental voices. Inspect any card to discover the source and the craft behind its effect." % [CardData.all_cards().size(),AUTHORS.size()],_show_title)
+	var filters: Array = ["all"] + AUTHORS + CardData.SUPPLEMENTAL_AUTHORS.keys() + ["neutral"]
+	var filter_grid := GridContainer.new()
+	filter_grid.position = Vector2(50,144)
+	filter_grid.size = Vector2(1340,94)
+	filter_grid.columns = 7
+	filter_grid.add_theme_constant_override("h_separation",12)
+	filter_grid.add_theme_constant_override("v_separation",8)
+	ui.add_child(filter_grid)
+	for filter in filters:
+		var btn := _button(filter_grid,filter.capitalize(),Rect2(0,0,181,43),func(): codex_filter = filter; _show_codex(),filter == codex_filter)
+		btn.custom_minimum_size = Vector2(181,43)
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(50,214)
-	scroll.size = Vector2(1340,638)
+	scroll.position = Vector2(50,254)
+	scroll.size = Vector2(1340,598)
 	ui.add_child(scroll)
 	var grid := GridContainer.new()
 	grid.columns = 5
@@ -610,7 +660,8 @@ func _show_codex() -> void:
 		holder.custom_minimum_size = Vector2(250,282)
 		grid.add_child(holder)
 		var tile := _panel(holder,Rect2(0,0,250,282),Color("1a2a20"),CardData.author_color(card.author))
-		if art: _picture(tile,_author_art(card.author),Rect2(7,7,236,102))
+		var tile_art := _card_art(card)
+		if tile_art: _picture(tile,tile_art,Rect2(7,7,236,102))
 		_label(tile,card.name,Rect2(16,124,222,56),25,IVORY,true)
 		_label(tile,"%d INK  ·  %s" % [card.cost,card.kind.to_upper()],Rect2(16,188,220,25),13,GOLD)
 		_button(tile,"Read annotation",Rect2(15,230,220,38),func(): _inspect_card(card))
@@ -628,9 +679,9 @@ func _show_deck() -> void:
 func _render_deck() -> void:
 	screen = "deck"
 	_clear()
-	_header("The writing desk", "Build an 18-card deck from your author's characters and neutral concepts. Up to two copies of each card.",_show_authors)
+	_header("The writing desk", "Build an 18-card deck from your author's characters, neutral concepts, and supplemental voices. Up to two copies of each card.",_show_authors)
 	var panel := _panel(ui,Rect2(1050,155,340,685),Color("15251df5"),GOLD)
-	_label(panel,NAMES[selected_author],Rect2(25,24,290,70),31,IVORY,true)
+	_label(panel,_author_name(selected_author),Rect2(25,24,290,70),31,IVORY,true)
 	_label(panel,"%d / 18 cards" % deck_draft.size(),Rect2(25,112,290,45),30,GOLD,true)
 	var units := 0
 	var total_cost := 0
@@ -650,7 +701,7 @@ func _render_deck() -> void:
 	rows.add_theme_constant_override("separation",9)
 	scroll.add_child(rows)
 	for card in CardData.all_cards():
-		if card.author not in [selected_author,"neutral"]: continue
+		if not CardData.is_includable(card,selected_author): continue
 		var holder := Control.new()
 		holder.custom_minimum_size = Vector2(942,95)
 		rows.add_child(holder)

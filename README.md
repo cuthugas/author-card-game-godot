@@ -1,12 +1,12 @@
 # Blackbriar: The Midnight Colloquium
 
-A complete local single-player literary card battler for Godot. Five public-domain authors duel on a candlelit 3 D table in a gothic Appalachian literary society.
+A complete local single-player literary card battler for Godot. Seven public-domain authors duel on a candlelit 3D table in a gothic Appalachian literary society.
 
 ## Play
 
-Run `./builds/blackbriar-linux/play.sh`, or open `project.godot` in Godot and press F 5. The packaged runtime targets this Linux x 86_64 computer; compatible system libraries are required. See BUILD.md for rebuilding and platform details.
+Run `./builds/blackbriar-linux/play.sh`, or open `project.godot` in Godot and press F5. The packaged runtime targets this Linux x86_64 computer; compatible system libraries are required. See BUILD.md for rebuilding and platform details.
 
-Choose Poe, Shelley, Shakespeare, Austen, or Carroll. Enter a quick duel or earn five campaign seals with each author. Build an 18-card deck from 37 cards. Each card includes a source reference and a literary annotation. All cards are available immediately; campaign seals reward mastery.
+Choose Poe, Shelley, Shakespeare, Austen, Carroll, Conan Doyle, or Rice Burroughs. Enter a quick duel or earn five campaign seals through the original five authors. Build an 18-card deck from 59 cards, drawing on your author's characters, neutral literary-device cards, and supplemental cards from Ambrose Bierce that reshape how other cards behave. Each card includes a source reference and a literary annotation. All cards are available immediately; campaign seals reward mastery.
 
 Select a card, then a lane. Spend Inspiration on characters, literary concepts, or your author power. End chapter resolves clashes and the AI reply. Reduce the rival's 16 Reputation to zero. Ink grows from 2 to 6; exhaustion creates increasing fatigue. Matches typically last five chapters in automated play. Optional Close Reading questions reward correct answers with 1 ink and a saved insight; wrong answers have no penalty.
 
@@ -14,9 +14,9 @@ Mouse controls all actions. Esc opens/closes the pause menu; F 11 toggles fullsc
 
 ## Verification
 
-- 7,306 rules checks across 200 seeded matches: zero failures,3–10 chapters, median 5.
-- 60 scene lifecycle checks: zero failures.
-- Full mouse-event duel:35 clicks,6 chapters, zero failures.
+- 13,715 rules checks across 392 seeded matches: zero failures, 3–10 chapters, median 5.
+- 69 scene lifecycle checks, including replay ordering: zero failures.
+- Full mouse-event duel: 48 clicks, nine chapters, zero failures.
 - 12 profile/campaign validation checks: zero failures.
 - Rendered review of title, authors, battle, campaign, deck editor, catalogue, tutorial, quiz and result screens.
 - Normal GUI shutdown exits cleanly after audio cleanup.

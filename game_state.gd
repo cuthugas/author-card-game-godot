@@ -76,7 +76,7 @@ func can_play_card(side: int, hand_index: int, lane: int = 0) -> bool:
 	return _effect_valid(side, str(card.effect), lane)
 
 func _effect_valid(side: int, effect: String, lane: int) -> bool:
-	if effect == "buff": return players[side].board[lane] != null
+	if effect in ["buff", "reprieve"]: return players[side].board[lane] != null
 	if effect == "weaken": return players[1-side].board[lane] != null
 	if effect == "metaphor":
 		var previous: String = players[side].last_spell
@@ -130,6 +130,17 @@ func _resolve_effect(side: int, effect: String, lane: int) -> void:
 		"weaken":
 			players[1-side].board[lane].attack = maxi(0, players[1-side].board[lane].attack - 2)
 			_hit_unit(1-side, lane, 1)
+		"expose":
+			var foe = players[1-side].board[lane]
+			# The Dictionary only attacks a defended falsehood.  A character
+			# without a shield is merely exposed; the sting goes to its author.
+			if foe != null and foe.get("shield", false):
+				foe.shield = false
+				foe.health -= 1
+				if foe.health > 0 and foe.effect == "rage": foe.attack += 1
+				if foe.health <= 0: _defeat_unit(1-side, lane)
+			else: players[1-side].reputation -= 1
+		"reprieve": p.board[lane].reprieve = true
 
 func _hit_unit(side: int, lane: int, amount: int, defer_death: bool = false) -> void:
 	var unit = players[side].board[lane]
@@ -142,6 +153,10 @@ func _hit_unit(side: int, lane: int, amount: int, defer_death: bool = false) -> 
 func _defeat_unit(side: int, lane: int) -> void:
 	var unit = players[side].board[lane]
 	if unit == null: return
+	if unit.get("reprieve", false):
+		unit.reprieve = false
+		unit.health = 1
+		return
 	players[side].board[lane] = null
 	players[side].discard.append(unit)
 	if unit.effect == "death_draw": draw_card(side)
@@ -175,6 +190,12 @@ func power(side: int) -> bool:
 		"carroll":
 			draw_card(side)
 			draw_card(side)
+		"doyle":
+			players[1-side].reputation -= 1
+			draw_card(side)
+		"burroughs":
+			for unit in p.board:
+				if unit != null: unit.max_health += 1; unit.health += 1
 	_check_winner()
 	_record_action("power",side,-1,"%s uses %s (−2 ink). %s" % [_who(side),CardData.AUTHORS[p.author].power,CardData.AUTHORS[p.author].power_text])
 	state_changed.emit()
@@ -284,6 +305,8 @@ func _ai_score(card: Dictionary, lane: int) -> float:
 			"foreshadow": score = 3.5 if not players[1].deck.is_empty() else -2.0
 			"metaphor": score = 3.0
 			"weaken": score = 4.0 + enemy.attack * 0.5
+			"expose": score = 4.0 + (4.0 if enemy != null and enemy.get("shield", false) else (1.0 if enemy != null else 0.5))
+			"reprieve": score = 3.0 + (3.0 if ally != null and ally.health <= 2 else -1.0)
 	return score + rng.randf() * 0.1
 
 func _check_winner() -> bool:

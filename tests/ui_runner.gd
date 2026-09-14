@@ -71,6 +71,8 @@ func _run() -> void:
 		scene._close_modal()
 		var before: int = scene.game.turn
 		scene._end_chapter()
+		await create_timer(0.1).timeout
+		scene.skip_replay = true
 		if not await wait_for_playback(): quit(1); return
 		check(scene.game.turn == before + 1 or scene.game.winner != -1, "end chapter resolves and returns")
 		check(not scene.busy, "input unlocks after chapter")
@@ -82,6 +84,18 @@ func _run() -> void:
 		var matches: int = scene.profile.data.matches
 		scene._on_finished(0)
 		check(scene.profile.data.matches == matches, "result rewards once")
+	# A paused replay must keep the exact action on screen until the player resumes.
+	scene._start_match("poe")
+	scene._end_chapter()
+	await create_timer(0.15).timeout
+	scene.replay_paused = true
+	var paused_step: int = scene.replay_step
+	await create_timer(0.3).timeout
+	check(scene.busy and scene.replay_step == paused_step, "pause freezes the visible replay action")
+	scene.replay_paused = false
+	scene.skip_replay = true
+	if not await wait_for_playback(): quit(1); return
+	check(scene.playback_event.is_empty(), "skip clears replay state before returning control")
 	scene._start_match("shelley")
 	var lethal := CardData.get_card("poe_raven")
 	lethal.attack = 16
@@ -89,8 +103,10 @@ func _run() -> void:
 	lethal.shield = false
 	scene.game.players[0].board[0] = lethal
 	scene._end_chapter()
+	await create_timer(0.1).timeout
 	check(scene.game.winner == 0 and scene.busy, "winning engine state waits for readable playback")
 	check(not is_instance_valid(scene.overlay), "winning result hidden before lethal action finishes")
+	scene.skip_replay = true
 	if not await wait_for_playback(): quit(1); return
 	check(is_instance_valid(scene.overlay), "winning result opens after action playback")
 	scene._start_match("poe")
