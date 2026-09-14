@@ -26,7 +26,7 @@ func put(game: GameState, side: int, lane: int, attack: int, health: int) -> voi
 	unit.attack = attack
 	unit.health = health
 	unit.max_health = health
-	unit.effect = ""
+	unit.keywords = []
 	unit.shield = false
 	game.players[side].board[lane] = unit
 

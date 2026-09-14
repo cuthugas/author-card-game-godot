@@ -136,7 +136,7 @@ func _simulate_matchups() -> void:
 func _put(game: GameState, side: int, id: String, lane: int) -> void:
 	var unit := CardData.get_card(id)
 	unit.max_health = unit.health
-	unit.shield = unit.effect == "shield"
+	unit.shield = unit.keywords.has("shield")
 	game.players[side].board[lane] = unit
 
 func _cast(game: GameState, id: String, lane := 0) -> bool:
@@ -146,6 +146,12 @@ func _cast(game: GameState, id: String, lane := 0) -> bool:
 
 func _test_effects() -> void:
 	var game := new_game()
+	check(_cast(game, "poe_raven", 2), "dread-tagged character can be cast")
+	check(game.players[0].board[2].attack == 4, "author passive adds +1 attack to a dread-tagged poe arrival")
+	var carroll_game := new_game("carroll", "poe")
+	check(_cast(carroll_game, "carroll_hatter", 1), "wonderland-tagged character can be cast")
+	check(carroll_game.players[0].board[1].health == 3 and carroll_game.players[0].board[1].max_health == 3, "author passive adds +1 health to a wonderland-tagged carroll arrival")
+	carroll_game.free()
 	check(not _cast(game, "imagery"), "buff needs allied target")
 	check(not _cast(game, "dramatic_irony"), "weaken needs enemy target")
 	check(not _cast(game, "metaphor"), "metaphor needs previous concept")

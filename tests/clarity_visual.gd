@@ -9,7 +9,7 @@ func capture(name: String) -> void:
 func unit(id: String) -> Dictionary:
 	var card := CardData.get_card(id)
 	card.max_health = card.health
-	card.shield = card.effect == "shield"
+	card.shield = card.keywords.has("shield")
 	return card
 func run() -> void:
 	scene = load("res://main.tscn").instantiate()

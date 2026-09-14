@@ -250,7 +250,10 @@ func _next_author(author: String, offset: int) -> String:
 	return AUTHORS[(AUTHORS.find(author)+offset)%AUTHORS.size()]
 
 func _power_description(author: String) -> String:
-	return CardData.AUTHORS[author].power + ": " + CardData.AUTHORS[author].power_text
+	var info: Dictionary = CardData.AUTHORS[author]
+	var text: String = info.power + ": " + info.power_text
+	if str(info.get("passive_text","")) != "": text += "   Passive: " + info.passive_text
+	return text
 
 func _show_campaign() -> void:
 	screen = "campaign"
@@ -356,7 +359,7 @@ func _board_slot(box: Rect2, unit, lane: int, enemy: bool) -> void:
 		_label(panel,"%d ATK   /   %d HP" % [unit.attack,unit.health],Rect2(110,66,211,28),19,GOLD)
 		var ability: String = unit.text
 		if unit.get("shield",false): ability = "SHIELDED · First hit is blocked."
-		elif unit.effect == "shield": ability = "Shield spent. Next hit deals damage."
+		elif unit.keywords.has("shield"): ability = "Shield spent. Next hit deals damage."
 		_label(panel,ability,Rect2(110,104,210,48),13,MUTED)
 	if chosen: _label(panel,"TARGET",Rect2(8,132,96,22),13,GOLD)
 	var hit := _button(panel,"",Rect2(0,0,box.size.x,box.size.y),func(): _lane_clicked(lane,enemy))
@@ -466,9 +469,12 @@ func _on_action(event: Dictionary) -> void:
 	if busy: action_queue.append(event)
 
 func _targets_enemy(card: Dictionary) -> bool:
-	var effect: String = card.effect
-	if effect == "metaphor": effect = game.players[0].last_spell
-	return card.kind != "Character" and effect in ["damage","weaken","expose"]
+	if card.kind == "Character": return false
+	var effects: Array = GameState._effects_for(card, "on_play")
+	if GameState._has_effect_type(effects, "repeat_last_spell"): effects = game.players[0].last_spell_effects
+	for effect in effects:
+		if str(effect.get("type","")) in ["damage_enemy_lane","weaken_enemy_lane","expose_lane"]: return true
+	return false
 
 func _target_instruction(card: Dictionary) -> String:
 	if card.cost > game.players[0].inspiration: return "Needs %d ink; you have %d. Choose a cheaper card or end your turn." % [card.cost,game.players[0].inspiration]
